@@ -1,15 +1,28 @@
 ﻿using UnityEngine;
+using System;
 
 public class TankMovement : MonoBehaviour
 {
 
     public int m_PlayerNumber = 1;         
     public float m_Speed = 12f;            
+
+    // Acceleration constant of tank
+    public float m_ForwardAcceleration = 24f;
+
+    // Tolerance of difference between desired and actual forward speed
+    public float m_SpeedTolerance = 0.1f;
+
+    // Sideward drag constant to reduce drifting
+    public float m_SidewardDragConstant = 0.1f;
     public float m_TurnSpeed = 180f;       
     public AudioSource m_MovementAudio;    
     public AudioClip m_EngineIdling;       
     public AudioClip m_EngineDriving;      
     public float m_PitchRange = 0.2f;
+
+    [HideInInspector]
+    public float m_SpeedDecrement = 0f;
 
 
     private string m_MovementAxisName;     
@@ -17,7 +30,7 @@ public class TankMovement : MonoBehaviour
     private Rigidbody m_Rigidbody;         
     private float m_MovementInputValue;    
     private float m_TurnInputValue;        
-    private float m_OriginalPitch;         
+    private float m_OriginalPitch;     
 
 
     private void Awake()
@@ -67,7 +80,7 @@ public class TankMovement : MonoBehaviour
         if (m_MovementAudio.clip != currentClip)
         {
             m_MovementAudio.clip = currentClip;
-            m_MovementAudio.pitch = Random.Range(m_OriginalPitch - m_PitchRange, m_OriginalPitch + m_PitchRange);
+            m_MovementAudio.pitch = UnityEngine.Random.Range(m_OriginalPitch - m_PitchRange, m_OriginalPitch + m_PitchRange);
             m_MovementAudio.Play();
         }
     }
@@ -83,9 +96,45 @@ public class TankMovement : MonoBehaviour
 
     private void Move()
     {
-        // Adjust the position of the tank based on the player's input.
-        Vector3 movement = transform.forward * m_MovementInputValue * m_Speed * Time.deltaTime;
-        m_Rigidbody.MovePosition(m_Rigidbody.position + movement);
+        
+        // Propel tank in the forward or backward direction
+        MoveForward();
+
+        // Reduce tank's sideways movement
+        SuppressSidewaysMovement();
+        
+        
+    }
+
+    private void MoveForward() {
+        // Compute current net speed in the direction of movement
+        float currentMovementSpeed = Vector3.Dot(m_Rigidbody.velocity, transform.forward);
+
+        // Compute target net speed in the direction of movement 
+        float targetMovementSpeed = m_MovementInputValue * (m_Speed - m_SpeedDecrement);
+
+        // If forward speed is within tolerance limits, don't bother applying acceleration to the tank
+        if (Math.Abs(currentMovementSpeed - targetMovementSpeed)<=m_SpeedTolerance) return;
+        
+        // Compute target acceleration based on whether the tank is to move forwards or backwards
+        Vector3 targetAcceleration = m_ForwardAcceleration * (currentMovementSpeed<targetMovementSpeed? 1f : -1f) * transform.forward;
+
+        // Apply acceleration on tank
+        m_Rigidbody.AddForce(targetAcceleration, ForceMode.Acceleration);
+    }
+
+    private void SuppressSidewaysMovement() {
+        // Compute current net speed in the direction of movement
+        float currentMovementSpeed = Vector3.Dot(m_Rigidbody.velocity, transform.forward);
+
+        // Compute sidewards velocity of tank
+        Vector3 sidewardsVelocity = m_Rigidbody.velocity - (transform.forward * currentMovementSpeed);
+
+        // Compute sidewards drag (acceleration) to reduce drifting effects
+        Vector3 sidewardsDrag = -1F * sidewardsVelocity * m_SidewardDragConstant;
+
+        // Apply sideward drag (acceleration) on tank
+        m_Rigidbody.AddForce(sidewardsDrag, ForceMode.VelocityChange);
     }
 
 

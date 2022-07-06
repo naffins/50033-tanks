@@ -28,10 +28,11 @@ public class GameManager : MonoBehaviour
     {
         m_StartWait = new WaitForSeconds(m_StartDelay);
         m_EndWait = new WaitForSeconds(m_EndDelay);
+    }
 
+    public void StartGame() {
         SpawnAllTanks();
         SetCameraTargets();
-
         StartCoroutine(GameLoop());
     }
 

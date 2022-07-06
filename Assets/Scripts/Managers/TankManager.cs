@@ -5,6 +5,12 @@ using UnityEngine;
 [Serializable]
 public class TankManager
 {
+
+    // Debuffs to be applied for each round won
+    public float m_HorizontalShellDispersionAngleRangeIncrement = 4f;
+    public float m_VerticalShellDispersionAngleRangeIncrement = 1.5f;
+    public float m_FireRateIncrementRate = 0.25f;
+    public float m_SpeedDecrementRate = 1f;
     
     public Color m_PlayerColor;
     public Transform m_SpawnPoint;
@@ -65,12 +71,16 @@ public class TankManager
 
     public void EnableControl()
     {
-        if (m_Movement != null) m_Movement.enabled = true;
-
         if (m_StateController != null) m_StateController.enabled = true;
 
         m_Shooting.enabled = true;
         m_CanvasGameObject.SetActive(true);
+
+        // In case of player
+        if (m_Movement != null) {
+            m_Movement.enabled = true;
+            ApplyPlayerDebuffs();
+        }
     }
 
     public void Reset()
@@ -80,6 +90,17 @@ public class TankManager
 
         m_Instance.SetActive(false);
         m_Instance.SetActive(true);
+    }
+
+    private void ApplyPlayerDebuffs() {
+        // Speed reduction
+        m_Movement.m_SpeedDecrement = m_SpeedDecrementRate * m_Wins;
+        // Firing vertical dispersion increase
+        m_Shooting.m_VerticalShellDispersionAngleRange = m_VerticalShellDispersionAngleRangeIncrement * m_Wins;
+        // Firing horizontal dispersion increase
+        m_Shooting.m_HorizontalShellDispersionAngleRange = m_HorizontalShellDispersionAngleRangeIncrement * m_Wins;
+        // Reload time increase
+        m_Shooting.m_FireRateIncrement = m_FireRateIncrementRate * m_Wins;
     }
 
 }
